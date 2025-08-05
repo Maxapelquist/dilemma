@@ -4,13 +4,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Heart, Sparkles } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, Heart, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 
 const Results = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const [matches, setMatches] = useState<any[]>([]);
+  const [matchesByCategory, setMatchesByCategory] = useState<Record<string, any[]>>({});
   const [loading, setLoading] = useState(true);
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const loadMatches = async () => {
@@ -76,7 +78,7 @@ const Results = () => {
 
         if (!currentUserPrefs || currentUserPrefs.length === 0) {
           console.log("No current user preferences found");
-          setMatches([]);
+          setMatchesByCategory({});
           setLoading(false);
           return;
         }
@@ -90,7 +92,7 @@ const Results = () => {
         console.log("All preferences count:", allPrefsCount, "Error:", countError);
 
         if (!allPrefsCount) {
-          setMatches([]);
+          setMatchesByCategory({});
           setLoading(false);
           return;
         }
@@ -110,15 +112,24 @@ const Results = () => {
 
         console.log("Matching options:", matchingOptions);
 
-        // Omvandla data för visning
+        // Omvandla data för visning och gruppera per kategori
         const matches = matchingOptions.map(match => ({
           name: match.preference_options?.title || '',
           description: match.preference_options?.description || '',
-          category: match.preference_options?.categories?.name || '',
-          icon: match.preference_options?.categories?.icon || '❤️'
+          category: match.preference_options?.categories?.name || 'Övrigt',
+          categoryIcon: match.preference_options?.categories?.icon || '❤️'
         }));
 
-        setMatches(matches);
+        // Gruppera matches per kategori
+        const grouped = matches.reduce((acc, match) => {
+          if (!acc[match.category]) {
+            acc[match.category] = [];
+          }
+          acc[match.category].push(match);
+          return acc;
+        }, {} as Record<string, any[]>);
+
+        setMatchesByCategory(grouped);
       } catch (error) {
         console.error("Error loading matches:", error);
       }
@@ -159,27 +170,57 @@ const Results = () => {
         </div>
 
         <div className="space-y-4">
-          {matches.length === 0 ? (
+          {Object.keys(matchesByCategory).length === 0 ? (
             <Card className="text-center p-8">
               <p className="text-muted-foreground">
                 Ni har inga gemensamma preferenser än. Klicka på "Välj preferenser" för att börja!
               </p>
             </Card>
           ) : (
-            matches.map((match, index) => (
-              <Card key={index} className="shadow-soft">
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-3">
-                    <span className="text-2xl">{match.icon}</span>
-                    <div>
-                      <p>{match.name}</p>
-                      <p className="text-sm text-muted-foreground font-normal">{match.category}</p>
-                    </div>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">{match.description}</p>
-                </CardContent>
+            Object.entries(matchesByCategory).map(([category, matches]) => (
+              <Card key={category} className="shadow-soft">
+                <Collapsible
+                  open={openCategories[category]}
+                  onOpenChange={(isOpen) => 
+                    setOpenCategories(prev => ({ ...prev, [category]: isOpen }))
+                  }
+                >
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <span className="text-2xl">{matches[0]?.categoryIcon}</span>
+                          <div>
+                            <p>{category}</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              {matches.length} gemensamma {matches.length === 1 ? 'preferens' : 'preferenser'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                            {matches.length}
+                          </div>
+                          {openCategories[category] ? (
+                            <ChevronDown className="w-5 h-5" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5" />
+                          )}
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-3">
+                      {matches.map((match, index) => (
+                        <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border">
+                          <h4 className="font-medium text-foreground mb-2">{match.name}</h4>
+                          <p className="text-sm text-muted-foreground">{match.description}</p>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
               </Card>
             ))
           )}
