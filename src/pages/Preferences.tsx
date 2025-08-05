@@ -4,9 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
-import { ArrowLeft } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, ChevronDown, ChevronRight } from "lucide-react";
 
 const Preferences = () => {
   const { sessionId } = useParams();
@@ -17,6 +18,7 @@ const Preferences = () => {
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [categoryName, setCategoryName] = useState('');
+  const [openSubcategories, setOpenSubcategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const loadOptions = async () => {
@@ -40,14 +42,25 @@ const Preferences = () => {
       
       setCategoryName(categoryData?.name || '');
 
-      // Hämta preferenser för vald kategori
+      // Hämta preferenser för vald kategori, sorterade efter underkategori och titel
       const { data } = await supabase
         .from("preference_options")
         .select("*")
         .eq("category_id", categoryId)
+        .order("subcategory")
         .order("title");
       
       setOptions(data || []);
+
+      // Sätt alla underkategorier som öppna som standard
+      if (data) {
+        const subcategories = [...new Set(data.map(opt => opt.subcategory || 'Allmänt'))];
+        const initialOpenSubcategories = subcategories.reduce((acc, subcategory) => {
+          acc[subcategory] = true;
+          return acc;
+        }, {} as Record<string, boolean>);
+        setOpenSubcategories(initialOpenSubcategories);
+      }
 
       // Hämta användarens sparade preferenser för denna session och kategori
       const { data: userPrefs } = await supabase
@@ -158,22 +171,71 @@ const Preferences = () => {
         </div>
 
         <div className="space-y-4">
-          {options.map((option) => (
-            <Card key={option.id} className="p-4">
-              <CardContent className="p-0">
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    checked={selectedOptions.has(option.id)}
-                    onCheckedChange={() => handleOptionToggle(option.id)}
-                  />
-                  <div>
-                    <p className="font-medium">{option.title}</p>
-                    <p className="text-sm text-muted-foreground">{option.description}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {(() => {
+            // Gruppera optionerna efter underkategori
+            const optionsBySubcategory = options.reduce((acc, option) => {
+              const subcategory = option.subcategory || 'Allmänt';
+              if (!acc[subcategory]) {
+                acc[subcategory] = [];
+              }
+              acc[subcategory].push(option);
+              return acc;
+            }, {} as Record<string, any[]>);
+
+            return Object.entries(optionsBySubcategory).map(([subcategory, subcategoryOptions]: [string, any[]]) => (
+              <Card key={subcategory} className="shadow-soft">
+                <Collapsible
+                  open={openSubcategories[subcategory]}
+                  onOpenChange={(isOpen) => 
+                    setOpenSubcategories(prev => ({ ...prev, [subcategory]: isOpen }))
+                  }
+                >
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                      <CardTitle className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3">
+                          <div>
+                            <p>{subcategory}</p>
+                            <p className="text-sm text-muted-foreground font-normal">
+                              {subcategoryOptions.length} {subcategoryOptions.length === 1 ? 'alternativ' : 'alternativ'}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                            {subcategoryOptions.filter(opt => selectedOptions.has(opt.id)).length}
+                          </div>
+                          {openSubcategories[subcategory] ? (
+                            <ChevronDown className="w-5 h-5" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5" />
+                          )}
+                        </div>
+                      </CardTitle>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="pt-0 space-y-3">
+                      {subcategoryOptions.map((option) => (
+                        <div key={option.id} className="p-3 rounded-lg bg-muted/20 border border-border">
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              checked={selectedOptions.has(option.id)}
+                              onCheckedChange={() => handleOptionToggle(option.id)}
+                            />
+                            <div>
+                              <p className="font-medium">{option.title}</p>
+                              <p className="text-sm text-muted-foreground">{option.description}</p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
+              </Card>
+            ));
+          })()}
         </div>
 
         <GradientButton onClick={savePreferences} className="w-full">
