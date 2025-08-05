@@ -10,9 +10,10 @@ import { ArrowLeft, Heart, Sparkles, ChevronDown, ChevronRight } from "lucide-re
 const Results = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
-  const [matchesByCategory, setMatchesByCategory] = useState<Record<string, any[]>>({});
+  const [matchesByCategory, setMatchesByCategory] = useState<Record<string, Record<string, any[]>>>({});
   const [loading, setLoading] = useState(true);
   const [openCategories, setOpenCategories] = useState<Record<string, boolean>>({});
+  const [openSubcategories, setOpenSubcategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const loadMatches = async () => {
@@ -65,6 +66,7 @@ const Results = () => {
             preference_options (
               title,
               description,
+              subcategory,
               categories (
                 name,
                 icon
@@ -112,22 +114,26 @@ const Results = () => {
 
         console.log("Matching options:", matchingOptions);
 
-        // Omvandla data för visning och gruppera per kategori
+        // Omvandla data för visning och gruppera per kategori och underkategori
         const matches = matchingOptions.map(match => ({
           name: match.preference_options?.title || '',
           description: match.preference_options?.description || '',
           category: match.preference_options?.categories?.name || 'Övrigt',
-          categoryIcon: match.preference_options?.categories?.icon || '❤️'
+          categoryIcon: match.preference_options?.categories?.icon || '❤️',
+          subcategory: match.preference_options?.subcategory || 'Allmänt'
         }));
 
-        // Gruppera matches per kategori
+        // Gruppera matches per kategori och sedan per underkategori
         const grouped = matches.reduce((acc, match) => {
           if (!acc[match.category]) {
-            acc[match.category] = [];
+            acc[match.category] = {};
           }
-          acc[match.category].push(match);
+          if (!acc[match.category][match.subcategory]) {
+            acc[match.category][match.subcategory] = [];
+          }
+          acc[match.category][match.subcategory].push(match);
           return acc;
-        }, {} as Record<string, any[]>);
+        }, {} as Record<string, Record<string, any[]>>);
 
         setMatchesByCategory(grouped);
       } catch (error) {
@@ -177,52 +183,96 @@ const Results = () => {
               </p>
             </Card>
           ) : (
-            Object.entries(matchesByCategory).map(([category, matches]) => (
-              <Card key={category} className="shadow-soft">
-                <Collapsible
-                  open={openCategories[category]}
-                  onOpenChange={(isOpen) => 
-                    setOpenCategories(prev => ({ ...prev, [category]: isOpen }))
-                  }
-                >
-                  <CollapsibleTrigger asChild>
-                    <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
-                      <CardTitle className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <span className="text-2xl">{matches[0]?.categoryIcon}</span>
-                          <div>
-                            <p>{category}</p>
-                            <p className="text-sm text-muted-foreground font-normal">
-                              {matches.length} gemensamma {matches.length === 1 ? 'preferens' : 'preferenser'}
-                            </p>
+            Object.entries(matchesByCategory).map(([category, subcategories]) => {
+              // Räkna totalt antal matches i denna kategori
+              const totalMatches = Object.values(subcategories).reduce((total, matches) => total + matches.length, 0);
+              // Hämta ikonen från första matchen i första underkategorin
+              const categoryIcon = Object.values(subcategories)[0]?.[0]?.categoryIcon || '❤️';
+              
+              return (
+                <Card key={category} className="shadow-soft">
+                  <Collapsible
+                    open={openCategories[category]}
+                    onOpenChange={(isOpen) => 
+                      setOpenCategories(prev => ({ ...prev, [category]: isOpen }))
+                    }
+                  >
+                    <CollapsibleTrigger asChild>
+                      <CardHeader className="cursor-pointer hover:bg-muted/50 transition-colors">
+                        <CardTitle className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <span className="text-2xl">{categoryIcon}</span>
+                            <div>
+                              <p>{category}</p>
+                              <p className="text-sm text-muted-foreground font-normal">
+                                {totalMatches} gemensamma {totalMatches === 1 ? 'preferens' : 'preferenser'}
+                              </p>
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
-                            {matches.length}
+                          <div className="flex items-center space-x-2">
+                            <div className="bg-primary text-primary-foreground rounded-full w-8 h-8 flex items-center justify-center text-sm font-bold">
+                              {totalMatches}
+                            </div>
+                            {openCategories[category] ? (
+                              <ChevronDown className="w-5 h-5" />
+                            ) : (
+                              <ChevronRight className="w-5 h-5" />
+                            )}
                           </div>
-                          {openCategories[category] ? (
-                            <ChevronDown className="w-5 h-5" />
-                          ) : (
-                            <ChevronRight className="w-5 h-5" />
-                          )}
-                        </div>
-                      </CardTitle>
-                    </CardHeader>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <CardContent className="pt-0 space-y-3">
-                      {matches.map((match, index) => (
-                        <div key={index} className="p-4 rounded-lg bg-muted/30 border border-border">
-                          <h4 className="font-medium text-foreground mb-2">{match.name}</h4>
-                          <p className="text-sm text-muted-foreground">{match.description}</p>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </CollapsibleContent>
-                </Collapsible>
-              </Card>
-            ))
+                        </CardTitle>
+                      </CardHeader>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <CardContent className="pt-0 space-y-4">
+                        {Object.entries(subcategories).map(([subcategory, matches]) => (
+                          <div key={subcategory} className="border border-border rounded-lg overflow-hidden">
+                            <Collapsible
+                              open={openSubcategories[`${category}-${subcategory}`]}
+                              onOpenChange={(isOpen) => 
+                                setOpenSubcategories(prev => ({ ...prev, [`${category}-${subcategory}`]: isOpen }))
+                              }
+                            >
+                              <CollapsibleTrigger asChild>
+                                <div className="cursor-pointer hover:bg-muted/30 transition-colors p-4 bg-muted/10">
+                                  <div className="flex items-center justify-between">
+                                    <div>
+                                      <h3 className="font-medium text-foreground">{subcategory}</h3>
+                                      <p className="text-sm text-muted-foreground">
+                                        {matches.length} {matches.length === 1 ? 'preferens' : 'preferenser'}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="bg-secondary text-secondary-foreground rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold">
+                                        {matches.length}
+                                      </div>
+                                      {openSubcategories[`${category}-${subcategory}`] ? (
+                                        <ChevronDown className="w-4 h-4" />
+                                      ) : (
+                                        <ChevronRight className="w-4 h-4" />
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="p-4 space-y-3 bg-background/50">
+                                  {matches.map((match, index) => (
+                                    <div key={index} className="p-3 rounded-lg bg-card border border-border">
+                                      <h4 className="font-medium text-foreground mb-1">{match.name}</h4>
+                                      <p className="text-sm text-muted-foreground">{match.description}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </CollapsibleContent>
+                  </Collapsible>
+                </Card>
+              );
+            })
           )}
         </div>
 
