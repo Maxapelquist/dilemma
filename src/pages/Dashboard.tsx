@@ -153,67 +153,37 @@ const Dashboard = () => {
 
       {/* Content */}
       <div className="px-6 space-y-6">
-        {/* Partner Status or Connect to Partner */}
+        {/* Sessions - Primary Content */}
         {couple && couple.user2_id ? (
-          <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 rounded-full bg-gradient-accent flex items-center justify-center">
-                  <Users className="w-6 h-6 text-accent-foreground" />
+          <div className="space-y-6">
+            {/* Partner Status - Compact */}
+            <div className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border/30">
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center">
+                  <Users className="w-4 h-4 text-accent-foreground" />
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-medium">Ditt par</h3>
-                  <p className="text-sm text-muted-foreground">
-                    Du och {partnerName} är redo att utforska tillsammans
-                  </p>
-                </div>
-                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
-          <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-primary flex items-center justify-center">
-                    <Users className="w-6 h-6 text-primary-foreground" />
-                  </div>
-                  <div>
-                    <h3 className="font-medium">Koppla till partner</h3>
-                    <p className="text-sm text-muted-foreground">
-                      Bjud in din partner för att starta sessioner tillsammans
-                    </p>
+                <div>
+                  <p className="text-sm font-medium">Kopplad till {partnerName}</p>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                    <span className="text-xs text-muted-foreground">Aktiv</span>
                   </div>
                 </div>
-                <Button 
-                  onClick={() => navigate("/partner-link")}
-                  className="bg-gradient-primary hover:opacity-90"
-                >
-                  <ExternalLink className="w-4 h-4 mr-2" />
-                  Koppla
-                </Button>
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Sessions - Main Content */}
-        {couple && couple.user2_id ? (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Era sessioner</h2>
               <GradientButton 
                 onClick={createNewSession}
                 size="sm"
-                className="h-9"
               >
                 <Plus className="w-4 h-4 mr-2" />
                 Ny session
               </GradientButton>
             </div>
-            
-            {sessions.length === 0 ? (
+
+            {/* Sessions List */}
+            <div className="space-y-4">
+              <h2 className="text-xl font-semibold">Era sessioner</h2>
+              
+              {sessions.length === 0 ? (
               <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
                 <CardContent className="p-8 text-center">
                   <div className="w-16 h-16 mx-auto rounded-full bg-gradient-primary flex items-center justify-center mb-4">
@@ -273,6 +243,7 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
+            </div>
           </div>
         ) : (
           // Not coupled yet - show simplified view
