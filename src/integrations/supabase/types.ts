@@ -20,6 +20,7 @@ export type Database = {
           description: string | null
           icon: string | null
           id: string
+          is_visible: boolean
           name: string
           sort_order: number | null
           updated_at: string
@@ -29,6 +30,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_visible?: boolean
           name: string
           sort_order?: number | null
           updated_at?: string
@@ -38,6 +40,7 @@ export type Database = {
           description?: string | null
           icon?: string | null
           id?: string
+          is_visible?: boolean
           name?: string
           sort_order?: number | null
           updated_at?: string
@@ -77,6 +80,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_visible: boolean
           subcategory: string | null
           title: string
         }
@@ -85,6 +89,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_visible?: boolean
           subcategory?: string | null
           title: string
         }
@@ -93,6 +98,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_visible?: boolean
           subcategory?: string | null
           title?: string
         }

@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, User, Settings } from "lucide-react";
+import { LogOut, User, Settings, Shield } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import type { User as SupabaseUser } from "@supabase/supabase-js";
 
@@ -136,6 +136,14 @@ const GlobalHeader = () => {
           >
             <Settings className="mr-2 h-4 w-4" />
             Dashboard
+          </DropdownMenuItem>
+          
+          <DropdownMenuItem 
+            onClick={() => navigate("/admin")}
+            className="cursor-pointer hover:bg-muted/50"
+          >
+            <Shield className="mr-2 h-4 w-4" />
+            Admin
           </DropdownMenuItem>
           
           <DropdownMenuSeparator className="bg-border/50" />
