@@ -37,8 +37,8 @@ const PartnerLink = () => {
         .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
         .maybeSingle();
 
-      if (couples && couples.user1_id !== couples.user2_id) {
-        // Only set as existing if both users are different (properly paired)
+      if (couples && couples.user2_id && couples.user1_id !== couples.user2_id) {
+        // Only set as existing if both users are present and different (properly paired)
         setExistingCouple(couples);
       }
     };
