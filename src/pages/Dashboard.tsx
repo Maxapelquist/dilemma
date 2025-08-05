@@ -39,11 +39,14 @@ const Dashboard = () => {
         return;
       }
 
-      // Load couple information (optional)
+      // Load couple information - get the most recent valid couple
       const { data: coupleData } = await supabase
         .from("couples")
         .select("*")
         .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+        .not("user2_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       setCouple(coupleData);

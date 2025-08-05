@@ -30,11 +30,14 @@ const PartnerLink = () => {
 
       setUserId(session.user.id);
 
-      // Check if user already has a couple
+      // Check if user already has a valid couple
       const { data: couples } = await supabase
         .from("couples")
         .select("*")
         .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
+        .not("user2_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
         .maybeSingle();
 
       if (couples && couples.user2_id && couples.user1_id !== couples.user2_id) {
