@@ -136,6 +136,15 @@ const Results = () => {
         }, {} as Record<string, Record<string, any[]>>);
 
         setMatchesByCategory(grouped);
+        
+        // Sätt alla kategorier som öppna som standard
+        const categoryKeys = Object.keys(grouped);
+        const initialOpenCategories = categoryKeys.reduce((acc, category) => {
+          acc[category] = true;
+          return acc;
+        }, {} as Record<string, boolean>);
+        setOpenCategories(initialOpenCategories);
+        
       } catch (error) {
         console.error("Error loading matches:", error);
       }
