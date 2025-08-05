@@ -198,105 +198,71 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {/* Quick Actions */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Snabbåtgärder</h2>
-          
-          {couple && couple.user2_id ? (
-            <GradientButton 
-              onClick={createNewSession}
-              className="w-full justify-start h-auto p-4"
-            >
-              <Plus className="w-5 h-5 mr-3" />
-              <div className="text-left">
-                <div className="font-medium">Starta ny session</div>
-                <div className="text-sm opacity-90">Utforska nya preferenser tillsammans</div>
-              </div>
-            </GradientButton>
-          ) : (
-            <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
-              <CardContent className="p-4 text-center">
-                <Plus className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
-                <p className="text-sm text-muted-foreground">
-                  Koppla till din partner för att starta sessioner
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-
-        {/* Categories to Explore */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Utforska kategorier</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {categories.map((category) => (
-              <Card 
-                key={category.id}
-                className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm cursor-pointer hover:shadow-card transition-shadow"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="text-2xl">{category.icon}</div>
-                    <div className="flex-1">
-                      <h3 className="font-medium">{category.name}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        {category.description}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Sessions */}
-        {couple && couple.user2_id && (
+        {/* Sessions - Main Content */}
+        {couple && couple.user2_id ? (
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Senaste sessioner</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Era sessioner</h2>
+              <GradientButton 
+                onClick={createNewSession}
+                size="sm"
+                className="h-9"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Ny session
+              </GradientButton>
+            </div>
             
             {sessions.length === 0 ? (
               <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
-                <CardContent className="p-6 text-center">
-                  <Clock className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground">Inga sessioner än</p>
-                  <p className="text-sm text-muted-foreground">
-                    Skapa er första session för att komma igång
+                <CardContent className="p-8 text-center">
+                  <div className="w-16 h-16 mx-auto rounded-full bg-gradient-primary flex items-center justify-center mb-4">
+                    <Plus className="w-8 h-8 text-primary-foreground" />
+                  </div>
+                  <h3 className="font-medium mb-2">Ingen session än</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    Skapa er första session för att börja utforska preferenser tillsammans
                   </p>
+                  <GradientButton 
+                    onClick={createNewSession}
+                    className="mx-auto"
+                  >
+                    <Plus className="w-4 h-4 mr-2" />
+                    Skapa första sessionen
+                  </GradientButton>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-3">
+              <div className="grid gap-4">
                 {sessions.map((session) => (
                   <Card 
                     key={session.id} 
-                    className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm cursor-pointer hover:shadow-card transition-shadow"
+                    className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm cursor-pointer hover:shadow-card transition-all duration-300 hover:scale-[1.02]"
                     onClick={() => navigate(`/session/${session.id}`)}
                   >
-                    <CardContent className="p-4">
+                    <CardContent className="p-6">
                       <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
                             {session.status === "completed" ? (
-                              <CheckCircle className="w-5 h-5 text-primary-foreground" />
+                              <CheckCircle className="w-6 h-6 text-primary-foreground" />
                             ) : (
-                              <Clock className="w-5 h-5 text-primary-foreground" />
+                              <Clock className="w-6 h-6 text-primary-foreground" />
                             )}
                           </div>
                           <div>
-                            <h3 className="font-medium">{session.name}</h3>
+                            <h3 className="font-medium text-lg">{session.name}</h3>
                             <p className="text-sm text-muted-foreground">
-                              {new Date(session.created_at).toLocaleDateString("sv-SE")}
+                              Skapad {new Date(session.created_at).toLocaleDateString("sv-SE")}
                             </p>
                           </div>
                         </div>
                         
                         <div className="text-right">
-                          <div className={`text-sm font-medium ${
+                          <div className={`text-sm font-medium px-3 py-1 rounded-full ${
                             session.status === "completed" 
-                              ? "text-green-600" 
-                              : "text-orange-600"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
+                              : "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
                           }`}>
                             {session.status === "completed" ? "Avslutad" : "Aktiv"}
                           </div>
@@ -308,7 +274,50 @@ const Dashboard = () => {
               </div>
             )}
           </div>
+        ) : (
+          // Not coupled yet - show simplified view
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold">Kom igång</h2>
+            <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
+              <CardContent className="p-6 text-center">
+                <Plus className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="font-medium mb-2">Koppla till din partner</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  För att skapa sessioner behöver du först koppla till din partner
+                </p>
+                <Button 
+                  onClick={() => navigate("/partner-link")}
+                  className="bg-gradient-primary hover:opacity-90"
+                >
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Koppla till partner
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
         )}
+
+        {/* Categories to Explore */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Utforska kategorier</h2>
+          
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {categories.map((category) => (
+              <Card 
+                key={category.id}
+                className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm cursor-pointer hover:shadow-card transition-all duration-300 hover:scale-[1.02]"
+              >
+                <CardContent className="p-4 text-center">
+                  <div className="text-2xl mb-2">{category.icon}</div>
+                  <h3 className="font-medium text-sm">{category.name}</h3>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {category.description}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
