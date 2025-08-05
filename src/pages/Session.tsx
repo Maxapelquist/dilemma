@@ -18,6 +18,7 @@ const Session = () => {
       const { data } = await supabase
         .from("categories")
         .select("*")
+        .order("sort_order", { nullsFirst: false })
         .order("created_at");
       
       setCategories(data || []);
