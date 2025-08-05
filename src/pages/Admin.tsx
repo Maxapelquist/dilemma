@@ -4,15 +4,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useForm } from "react-hook-form";
-import { Eye, EyeOff, Plus, Edit } from "lucide-react";
+import { Eye, EyeOff, Plus, Trash2, ChevronDown, ChevronRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 interface Category {
@@ -38,6 +39,7 @@ export default function Admin() {
   const queryClient = useQueryClient();
   const [newCategoryDialog, setNewCategoryDialog] = useState(false);
   const [newPreferenceDialog, setNewPreferenceDialog] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
   // Forms
   const categoryForm = useForm({
@@ -146,6 +148,45 @@ export default function Admin() {
     }
   });
 
+  // Delete category
+  const deleteCategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("categories")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-preferences"] });
+      toast({ title: "Kategori borttagen" });
+    },
+    onError: () => {
+      toast({ title: "Fel vid borttagning", variant: "destructive" });
+    }
+  });
+
+  // Delete preference
+  const deletePreference = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("preference_options")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-preferences"] });
+      toast({ title: "Preferens borttagen" });
+    },
+    onError: () => {
+      toast({ title: "Fel vid borttagning", variant: "destructive" });
+    }
+  });
+
   // Create preference
   const createPreference = useMutation({
     mutationFn: async (data: any) => {
@@ -166,6 +207,14 @@ export default function Admin() {
     }
   });
 
+  // Toggle category expansion
+  const toggleCategoryExpansion = (categoryName: string) => {
+    setExpandedCategories(prev => ({
+      ...prev,
+      [categoryName]: !prev[categoryName]
+    }));
+  };
+
   // Group preferences by category and subcategory
   const groupedPreferences = preferences.reduce((acc, pref) => {
     const categoryName = categories.find(c => c.id === pref.category_id)?.name || "Okategoriserad";
@@ -177,6 +226,15 @@ export default function Admin() {
     acc[categoryName][subcategory].push(pref);
     return acc;
   }, {} as Record<string, Record<string, PreferenceOption[]>>);
+
+  // Get unique subcategories for a category
+  const getSubcategoriesForCategory = (categoryId: string) => {
+    const subcategories = preferences
+      .filter(p => p.category_id === categoryId && p.subcategory)
+      .map(p => p.subcategory!)
+      .filter((value, index, self) => self.indexOf(value) === index);
+    return subcategories;
+  };
 
   if (categoriesLoading || preferencesLoading) {
     return <div className="p-6">Laddar...</div>;
@@ -268,10 +326,10 @@ export default function Admin() {
             </Dialog>
           </div>
 
-          <div className="grid gap-4">
+          <div className="space-y-4">
             {categories.map((category) => (
               <Card key={category.id}>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                   <CardTitle className="text-lg">{category.name}</CardTitle>
                   <div className="flex items-center space-x-2">
                     <Badge variant={category.is_visible ? "default" : "secondary"}>
@@ -287,12 +345,51 @@ export default function Admin() {
                     >
                       {category.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Ta bort kategori</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Är du säker på att du vill ta bort kategorin "{category.name}"? Alla preferenser i denna kategori kommer också tas bort.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                          <AlertDialogAction 
+                            onClick={() => deleteCategory.mutate(category.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Ta bort
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <p className="text-muted-foreground">{category.description}</p>
                   {category.icon && <p className="text-sm">Ikon: {category.icon}</p>}
                   <p className="text-sm">Ordning: {category.sort_order}</p>
+                  
+                  {/* Show subcategories for this category */}
+                  <div className="mt-4">
+                    <h4 className="font-medium mb-2">Subkategorier:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {getSubcategoriesForCategory(category.id).map((subcategory) => (
+                        <Badge key={subcategory} variant="outline">
+                          {subcategory}
+                        </Badge>
+                      ))}
+                      {getSubcategoriesForCategory(category.id).length === 0 && (
+                        <span className="text-sm text-muted-foreground">Inga subkategorier</span>
+                      )}
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}
@@ -383,46 +480,91 @@ export default function Admin() {
             </Dialog>
           </div>
 
-          <div className="space-y-6">
+          <div className="space-y-4">
             {Object.entries(groupedPreferences).map(([categoryName, subcategories]) => (
               <Card key={categoryName}>
-                <CardHeader>
-                  <CardTitle>{categoryName}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {Object.entries(subcategories).map(([subcategoryName, prefs]) => (
-                    <div key={subcategoryName}>
-                      <h4 className="font-medium mb-2">{subcategoryName}</h4>
-                      <div className="grid gap-2">
-                        {prefs.map((pref) => (
-                          <div key={pref.id} className="flex items-center justify-between p-2 border rounded">
-                            <div className="flex-1">
-                              <p className="font-medium">{pref.title}</p>
-                              {pref.description && (
-                                <p className="text-sm text-muted-foreground">{pref.description}</p>
-                              )}
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Badge variant={pref.is_visible ? "default" : "secondary"}>
-                                {pref.is_visible ? "Synlig" : "Dold"}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => togglePreferenceVisibility.mutate({
-                                  id: pref.id,
-                                  is_visible: !pref.is_visible
-                                })}
-                              >
-                                {pref.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-                              </Button>
-                            </div>
+                <Collapsible 
+                  open={expandedCategories[categoryName]} 
+                  onOpenChange={() => toggleCategoryExpansion(categoryName)}
+                >
+                  <CollapsibleTrigger asChild>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 cursor-pointer hover:bg-muted/50">
+                      <CardTitle className="flex items-center">
+                        {expandedCategories[categoryName] ? 
+                          <ChevronDown className="w-4 h-4 mr-2" /> : 
+                          <ChevronRight className="w-4 h-4 mr-2" />
+                        }
+                        {categoryName}
+                      </CardTitle>
+                      <Badge variant="outline">
+                        {Object.values(subcategories).reduce((total, prefs) => total + prefs.length, 0)} preferenser
+                      </Badge>
+                    </CardHeader>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <CardContent className="space-y-4">
+                      {Object.entries(subcategories).map(([subcategoryName, prefs]) => (
+                        <div key={subcategoryName} className="border rounded-lg p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h4 className="font-medium">{subcategoryName}</h4>
+                            <Badge variant="secondary">{prefs.length} preferenser</Badge>
                           </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </CardContent>
+                          <div className="space-y-2">
+                            {prefs.map((pref) => (
+                              <div key={pref.id} className="flex items-center justify-between p-3 border rounded bg-card/50">
+                                <div className="flex-1">
+                                  <p className="font-medium">{pref.title}</p>
+                                  {pref.description && (
+                                    <p className="text-sm text-muted-foreground">{pref.description}</p>
+                                  )}
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Badge variant={pref.is_visible ? "default" : "secondary"}>
+                                    {pref.is_visible ? "Synlig" : "Dold"}
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => togglePreferenceVisibility.mutate({
+                                      id: pref.id,
+                                      is_visible: !pref.is_visible
+                                    })}
+                                  >
+                                    {pref.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                                  </Button>
+                                  <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                      <Button variant="ghost" size="sm">
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                      </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                      <AlertDialogHeader>
+                                        <AlertDialogTitle>Ta bort preferens</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                          Är du säker på att du vill ta bort preferensen "{pref.title}"?
+                                        </AlertDialogDescription>
+                                      </AlertDialogHeader>
+                                      <AlertDialogFooter>
+                                        <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                                        <AlertDialogAction 
+                                          onClick={() => deletePreference.mutate(pref.id)}
+                                          className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                        >
+                                          Ta bort
+                                        </AlertDialogAction>
+                                      </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                  </AlertDialog>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </CollapsibleContent>
+                </Collapsible>
               </Card>
             ))}
           </div>
