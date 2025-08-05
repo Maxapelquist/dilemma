@@ -4,8 +4,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Settings, Users, Heart, Clock, CheckCircle, ExternalLink } from "lucide-react";
+import { Plus, Settings, Users, Heart, Clock, CheckCircle, ExternalLink, Trash2 } from "lucide-react";
 
 const Dashboard = () => {
   const [user, setUser] = useState<any>(null);
@@ -122,6 +123,40 @@ const Dashboard = () => {
     }
   };
 
+  const deleteSession = async (sessionId: string, sessionName: string) => {
+    try {
+      // Först ta bort alla user_preferences för denna session
+      const { error: prefsError } = await supabase
+        .from("user_preferences")
+        .delete()
+        .eq("session_id", sessionId);
+
+      if (prefsError) throw prefsError;
+
+      // Sedan ta bort sessionen själv
+      const { error: sessionError } = await supabase
+        .from("sessions")
+        .delete()
+        .eq("id", sessionId);
+
+      if (sessionError) throw sessionError;
+
+      // Uppdatera lokalt state
+      setSessions(sessions.filter(s => s.id !== sessionId));
+
+      toast({
+        title: "Session borttagen",
+        description: `"${sessionName}" har tagits bort permanent.`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Ett fel uppstod",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     navigate("/");
@@ -207,42 +242,76 @@ const Dashboard = () => {
               </Card>
             ) : (
               <div className="grid gap-4">
-                {sessions.map((session) => (
-                  <Card 
-                    key={session.id} 
-                    className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm cursor-pointer hover:shadow-card transition-all duration-300 hover:scale-[1.02]"
-                    onClick={() => navigate(`/session/${session.id}`)}
-                  >
-                    <CardContent className="p-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
-                          <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
-                            {session.status === "completed" ? (
-                              <CheckCircle className="w-6 h-6 text-primary-foreground" />
-                            ) : (
-                              <Clock className="w-6 h-6 text-primary-foreground" />
-                            )}
-                          </div>
-                          <div>
-                            <h3 className="font-medium text-lg">{session.name}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              Skapad {new Date(session.created_at).toLocaleDateString("sv-SE")}
-                            </p>
-                          </div>
-                        </div>
-                        
-                        <div className="text-right">
-                          <div className={`text-sm font-medium px-3 py-1 rounded-full ${
-                            session.status === "completed" 
-                              ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
-                              : "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
-                          }`}>
-                            {session.status === "completed" ? "Avslutad" : "Aktiv"}
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                 {sessions.map((session) => (
+                   <Card 
+                     key={session.id} 
+                     className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm hover:shadow-card transition-all duration-300"
+                   >
+                     <CardContent className="p-6">
+                       <div className="flex items-center justify-between">
+                         <div 
+                           className="flex items-center space-x-4 cursor-pointer flex-1"
+                           onClick={() => navigate(`/session/${session.id}`)}
+                         >
+                           <div className="w-12 h-12 rounded-lg bg-gradient-primary flex items-center justify-center">
+                             {session.status === "completed" ? (
+                               <CheckCircle className="w-6 h-6 text-primary-foreground" />
+                             ) : (
+                               <Clock className="w-6 h-6 text-primary-foreground" />
+                             )}
+                           </div>
+                           <div>
+                             <h3 className="font-medium text-lg">{session.name}</h3>
+                             <p className="text-sm text-muted-foreground">
+                               Skapad {new Date(session.created_at).toLocaleDateString("sv-SE")}
+                             </p>
+                           </div>
+                         </div>
+                         
+                         <div className="flex items-center space-x-3">
+                           <div className={`text-sm font-medium px-3 py-1 rounded-full ${
+                             session.status === "completed" 
+                               ? "bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300" 
+                               : "bg-orange-100 text-orange-700 dark:bg-orange-900 dark:text-orange-300"
+                           }`}>
+                             {session.status === "completed" ? "Avslutad" : "Aktiv"}
+                           </div>
+                           
+                           <AlertDialog>
+                             <AlertDialogTrigger asChild>
+                               <Button
+                                 variant="ghost"
+                                 size="sm"
+                                 className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                 onClick={(e) => e.stopPropagation()}
+                               >
+                                 <Trash2 className="w-4 h-4" />
+                               </Button>
+                             </AlertDialogTrigger>
+                             <AlertDialogContent>
+                               <AlertDialogHeader>
+                                 <AlertDialogTitle>Ta bort session</AlertDialogTitle>
+                                 <AlertDialogDescription>
+                                   Är du säker på att du vill ta bort "{session.name}"? 
+                                   Detta kommer att ta bort alla preferenser och matchningar för denna session permanent.
+                                   Denna åtgärd kan inte ångras.
+                                 </AlertDialogDescription>
+                               </AlertDialogHeader>
+                               <AlertDialogFooter>
+                                 <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                                 <AlertDialogAction
+                                   onClick={() => deleteSession(session.id, session.name)}
+                                   className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                 >
+                                   Ta bort
+                                 </AlertDialogAction>
+                               </AlertDialogFooter>
+                             </AlertDialogContent>
+                           </AlertDialog>
+                         </div>
+                       </div>
+                     </CardContent>
+                   </Card>
                 ))}
               </div>
             )}
