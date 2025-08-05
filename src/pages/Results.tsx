@@ -56,22 +56,26 @@ const Results = () => {
           : coupleData.user1_id;
 
         // Först hämta partnerns preferenser för denna session
-        const { data: partnerPrefs } = await supabase
+        const { data: partnerPrefs, error: partnerError } = await supabase
           .from("user_preferences")
           .select("preference_option_id")
           .eq("session_id", sessionId)
           .eq("user_id", partnerId);
 
+        console.log("Partner preferences:", partnerPrefs, "Error:", partnerError);
+
         if (!partnerPrefs || partnerPrefs.length === 0) {
+          console.log("No partner preferences found");
           setMatches([]);
           setLoading(false);
           return;
         }
 
         const partnerPrefIds = partnerPrefs.map(p => p.preference_option_id);
+        console.log("Partner preference IDs:", partnerPrefIds);
 
         // Sedan hämta gemensamma preferenser
-        const { data: matchingPrefs } = await supabase
+        const { data: matchingPrefs, error: matchingError } = await supabase
           .from("user_preferences")
           .select(`
             preference_option_id,
@@ -87,6 +91,8 @@ const Results = () => {
           .eq("session_id", sessionId)
           .eq("user_id", currentUserId)
           .in("preference_option_id", partnerPrefIds);
+
+        console.log("Matching preferences:", matchingPrefs, "Error:", matchingError);
 
         // Omvandla data för visning
         const matches = (matchingPrefs || []).map(match => ({
