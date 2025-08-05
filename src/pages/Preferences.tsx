@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { GradientButton } from "@/components/ui/gradient-button";
 import { Button } from "@/components/ui/button";
@@ -10,23 +10,42 @@ import { ArrowLeft } from "lucide-react";
 const Preferences = () => {
   const { sessionId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const categoryId = searchParams.get('category');
   const [options, setOptions] = useState<any[]>([]);
   const [selectedOptions, setSelectedOptions] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [categoryName, setCategoryName] = useState('');
 
   useEffect(() => {
     const loadOptions = async () => {
+      if (!categoryId) {
+        setLoading(false);
+        return;
+      }
+
+      // Hämta kategorinamn
+      const { data: categoryData } = await supabase
+        .from("categories")
+        .select("name")
+        .eq("id", categoryId)
+        .single();
+      
+      setCategoryName(categoryData?.name || '');
+
+      // Hämta preferenser för vald kategori
       const { data } = await supabase
         .from("preference_options")
         .select("*")
-        .limit(10);
+        .eq("category_id", categoryId)
+        .order("title");
       
       setOptions(data || []);
       setLoading(false);
     };
 
     loadOptions();
-  }, []);
+  }, [categoryId]);
 
   const handleOptionToggle = (optionId: string) => {
     const newSelected = new Set(selectedOptions);
@@ -64,7 +83,7 @@ const Preferences = () => {
 
       <div className="px-6 space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Välj dina preferenser</h1>
+          <h1 className="text-2xl font-bold">{categoryName}</h1>
           <p className="text-muted-foreground">Markera vad som intresserar dig</p>
         </div>
 
