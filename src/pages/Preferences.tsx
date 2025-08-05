@@ -18,7 +18,7 @@ const Preferences = () => {
     const loadOptions = async () => {
       const { data } = await supabase
         .from("preference_options")
-        .select("*, subcategories(name, categories(name))")
+        .select("*")
         .limit(10);
       
       setOptions(data || []);
@@ -78,7 +78,7 @@ const Preferences = () => {
                     onCheckedChange={() => handleOptionToggle(option.id)}
                   />
                   <div>
-                    <p className="font-medium">{option.name}</p>
+                    <p className="font-medium">{option.title}</p>
                     <p className="text-sm text-muted-foreground">{option.description}</p>
                   </div>
                 </div>
