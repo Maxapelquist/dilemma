@@ -25,12 +25,22 @@ interface Category {
   is_visible: boolean;
 }
 
+interface Subcategory {
+  id: string;
+  name: string;
+  description?: string;
+  category_id: string;
+  sort_order?: number;
+  is_visible: boolean;
+}
+
 interface PreferenceOption {
   id: string;
   title: string;
   description?: string;
   category_id?: string;
   subcategory?: string;
+  subcategory_id?: string;
   is_visible: boolean;
 }
 
@@ -38,6 +48,7 @@ export default function Admin() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [newCategoryDialog, setNewCategoryDialog] = useState(false);
+  const [newSubcategoryDialog, setNewSubcategoryDialog] = useState(false);
   const [newPreferenceDialog, setNewPreferenceDialog] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
@@ -52,12 +63,22 @@ export default function Admin() {
     }
   });
 
+  const subcategoryForm = useForm({
+    defaultValues: {
+      name: "",
+      description: "",
+      category_id: "",
+      sort_order: 0,
+      is_visible: true
+    }
+  });
+
   const preferenceForm = useForm({
     defaultValues: {
       title: "",
       description: "",
       category_id: "",
-      subcategory: "",
+      subcategory_id: "",
       is_visible: true
     }
   });
@@ -76,17 +97,34 @@ export default function Admin() {
     }
   });
 
+  // Fetch subcategories
+  const { data: subcategories = [], isLoading: subcategoriesLoading } = useQuery({
+    queryKey: ["admin-subcategories"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("subcategories")
+        .select("*, categories(name)")
+        .order("sort_order", { ascending: true });
+      
+      if (error) throw error;
+      return data as (Subcategory & { categories: { name: string } })[];
+    }
+  });
+
   // Fetch preferences
   const { data: preferences = [], isLoading: preferencesLoading } = useQuery({
     queryKey: ["admin-preferences"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("preference_options")
-        .select("*")
+        .select("*, categories(name), subcategories(name)")
         .order("title", { ascending: true });
       
       if (error) throw error;
-      return data as PreferenceOption[];
+      return data as (PreferenceOption & { 
+        categories: { name: string } | null;
+        subcategories: { name: string } | null;
+      })[];
     }
   });
 
@@ -103,6 +141,25 @@ export default function Admin() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
       toast({ title: "Kategori uppdaterad" });
+    },
+    onError: () => {
+      toast({ title: "Fel vid uppdatering", variant: "destructive" });
+    }
+  });
+
+  // Toggle subcategory visibility
+  const toggleSubcategoryVisibility = useMutation({
+    mutationFn: async ({ id, is_visible }: { id: string; is_visible: boolean }) => {
+      const { error } = await supabase
+        .from("subcategories")
+        .update({ is_visible })
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-subcategories"] });
+      toast({ title: "Subkategori uppdaterad" });
     },
     onError: () => {
       toast({ title: "Fel vid uppdatering", variant: "destructive" });
@@ -148,6 +205,46 @@ export default function Admin() {
     }
   });
 
+  // Create subcategory
+  const createSubcategory = useMutation({
+    mutationFn: async (data: any) => {
+      const { error } = await supabase
+        .from("subcategories")
+        .insert([data]);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-subcategories"] });
+      setNewSubcategoryDialog(false);
+      subcategoryForm.reset();
+      toast({ title: "Subkategori skapad" });
+    },
+    onError: () => {
+      toast({ title: "Fel vid skapande", variant: "destructive" });
+    }
+  });
+
+  // Delete subcategory
+  const deleteSubcategory = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("subcategories")
+        .delete()
+        .eq("id", id);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-subcategories"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-preferences"] });
+      toast({ title: "Subkategori borttagen" });
+    },
+    onError: () => {
+      toast({ title: "Fel vid borttagning", variant: "destructive" });
+    }
+  });
+
   // Delete category
   const deleteCategory = useMutation({
     mutationFn: async (id: string) => {
@@ -160,6 +257,7 @@ export default function Admin() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-subcategories"] });
       queryClient.invalidateQueries({ queryKey: ["admin-preferences"] });
       toast({ title: "Kategori borttagen" });
     },
@@ -217,26 +315,17 @@ export default function Admin() {
 
   // Group preferences by category and subcategory
   const groupedPreferences = preferences.reduce((acc, pref) => {
-    const categoryName = categories.find(c => c.id === pref.category_id)?.name || "Okategoriserad";
-    const subcategory = pref.subcategory || "Allmänt";
+    const categoryName = pref.categories?.name || "Okategoriserad";
+    const subcategoryName = pref.subcategories?.name || pref.subcategory || "Allmänt";
     
     if (!acc[categoryName]) acc[categoryName] = {};
-    if (!acc[categoryName][subcategory]) acc[categoryName][subcategory] = [];
+    if (!acc[categoryName][subcategoryName]) acc[categoryName][subcategoryName] = [];
     
-    acc[categoryName][subcategory].push(pref);
+    acc[categoryName][subcategoryName].push(pref);
     return acc;
-  }, {} as Record<string, Record<string, PreferenceOption[]>>);
+  }, {} as Record<string, Record<string, any[]>>);
 
-  // Get unique subcategories for a category
-  const getSubcategoriesForCategory = (categoryId: string) => {
-    const subcategories = preferences
-      .filter(p => p.category_id === categoryId && p.subcategory)
-      .map(p => p.subcategory!)
-      .filter((value, index, self) => self.indexOf(value) === index);
-    return subcategories;
-  };
-
-  if (categoriesLoading || preferencesLoading) {
+  if (categoriesLoading || subcategoriesLoading || preferencesLoading) {
     return <div className="p-6">Laddar...</div>;
   }
 
@@ -250,6 +339,7 @@ export default function Admin() {
       <Tabs defaultValue="categories" className="space-y-6">
         <TabsList>
           <TabsTrigger value="categories">Kategorier</TabsTrigger>
+          <TabsTrigger value="subcategories">Subkategorier</TabsTrigger>
           <TabsTrigger value="preferences">Preferenser</TabsTrigger>
         </TabsList>
 
@@ -380,12 +470,14 @@ export default function Admin() {
                   <div className="mt-4">
                     <h4 className="font-medium mb-2">Subkategorier:</h4>
                     <div className="flex flex-wrap gap-2">
-                      {getSubcategoriesForCategory(category.id).map((subcategory) => (
-                        <Badge key={subcategory} variant="outline">
-                          {subcategory}
+                      {subcategories
+                        .filter(sub => sub.category_id === category.id)
+                        .map((subcategory) => (
+                        <Badge key={subcategory.id} variant="outline">
+                          {subcategory.name}
                         </Badge>
                       ))}
-                      {getSubcategoriesForCategory(category.id).length === 0 && (
+                      {subcategories.filter(sub => sub.category_id === category.id).length === 0 && (
                         <span className="text-sm text-muted-foreground">Inga subkategorier</span>
                       )}
                     </div>
@@ -393,6 +485,159 @@ export default function Admin() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="subcategories" className="space-y-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-2xl font-semibold">Subkategorier</h2>
+            <Dialog open={newSubcategoryDialog} onOpenChange={setNewSubcategoryDialog}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  Ny subkategori
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Skapa ny subkategori</DialogTitle>
+                </DialogHeader>
+                <Form {...subcategoryForm}>
+                  <form onSubmit={subcategoryForm.handleSubmit((data) => createSubcategory.mutate(data))} className="space-y-4">
+                    <FormField
+                      control={subcategoryForm.control}
+                      name="category_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Kategori</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Välj kategori" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <SelectItem key={category.id} value={category.id}>
+                                  {category.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={subcategoryForm.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Namn</FormLabel>
+                          <FormControl>
+                            <Input {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={subcategoryForm.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Beskrivning</FormLabel>
+                          <FormControl>
+                            <Textarea {...field} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={subcategoryForm.control}
+                      name="sort_order"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Sorteringsordning</FormLabel>
+                          <FormControl>
+                            <Input {...field} type="number" onChange={(e) => field.onChange(parseInt(e.target.value))} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" disabled={createSubcategory.isPending}>
+                      {createSubcategory.isPending ? "Skapar..." : "Skapa"}
+                    </Button>
+                  </form>
+                </Form>
+              </DialogContent>
+            </Dialog>
+          </div>
+
+          <div className="space-y-4">
+            {categories.map((category) => {
+              const categorySubcategories = subcategories.filter(sub => sub.category_id === category.id);
+              
+              if (categorySubcategories.length === 0) return null;
+              
+              return (
+                <Card key={category.id}>
+                  <CardHeader>
+                    <CardTitle>{category.name}</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {categorySubcategories.map((subcategory) => (
+                      <div key={subcategory.id} className="flex items-center justify-between p-3 border rounded">
+                        <div className="flex-1">
+                          <p className="font-medium">{subcategory.name}</p>
+                          {subcategory.description && (
+                            <p className="text-sm text-muted-foreground">{subcategory.description}</p>
+                          )}
+                          <p className="text-xs text-muted-foreground">Ordning: {subcategory.sort_order}</p>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant={subcategory.is_visible ? "default" : "secondary"}>
+                            {subcategory.is_visible ? "Synlig" : "Dold"}
+                          </Badge>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => toggleSubcategoryVisibility.mutate({
+                              id: subcategory.id,
+                              is_visible: !subcategory.is_visible
+                            })}
+                          >
+                            {subcategory.is_visible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
+                          </Button>
+                          <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                              <Button variant="ghost" size="sm">
+                                <Trash2 className="w-4 h-4 text-destructive" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Ta bort subkategori</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Är du säker på att du vill ta bort subkategorin "{subcategory.name}"? Alla preferenser i denna subkategori kommer att flyttas till "Allmänt".
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel>Avbryt</AlertDialogCancel>
+                                <AlertDialogAction 
+                                  onClick={() => deleteSubcategory.mutate(subcategory.id)}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  Ta bort
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        </div>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </TabsContent>
 
@@ -461,13 +706,24 @@ export default function Admin() {
                     />
                     <FormField
                       control={preferenceForm.control}
-                      name="subcategory"
+                      name="subcategory_id"
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Subkategori</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Valfritt" />
-                          </FormControl>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Välj subkategori (valfritt)" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {subcategories.map((subcategory) => (
+                                <SelectItem key={subcategory.id} value={subcategory.id}>
+                                  {subcategory.categories?.name} - {subcategory.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormItem>
                       )}
                     />
