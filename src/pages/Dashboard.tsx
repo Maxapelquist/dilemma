@@ -42,18 +42,28 @@ const Dashboard = () => {
       // Load couple information (optional)
       const { data: coupleData } = await supabase
         .from("couples")
-        .select(`
-          *,
-          profiles!couples_user1_id_fkey(name),
-          profiles_user2:profiles!couples_user2_id_fkey(name)
-        `)
+        .select("*")
         .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
         .maybeSingle();
 
       setCouple(coupleData);
 
-      // Load sessions if couple exists
-      if (coupleData) {
+      // Load partner information if couple exists
+      if (coupleData && coupleData.user2_id) {
+        const partnerId = coupleData.user1_id === session.user.id ? coupleData.user2_id : coupleData.user1_id;
+        
+        const { data: partnerProfile } = await supabase
+          .from("profiles")
+          .select("name")
+          .eq("id", partnerId)
+          .single();
+        
+        setCouple({
+          ...coupleData,
+          partnerName: partnerProfile?.name || "Partner"
+        });
+
+        // Load sessions if couple exists
         const { data: sessionsData } = await supabase
           .from("sessions")
           .select("*")
@@ -127,9 +137,7 @@ const Dashboard = () => {
     );
   }
 
-  const partnerName = couple?.user1_id === user?.id 
-    ? couple?.profiles_user2?.name 
-    : couple?.profiles?.name;
+  const partnerName = couple?.partnerName;
 
   return (
     <div className="min-h-screen bg-gradient-background">
@@ -138,7 +146,7 @@ const Dashboard = () => {
         <div>
           <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
-            {couple ? `Kopplad till ${partnerName}` : "Utforska kategorier och preferenser"}
+            {couple && couple.user2_id ? `Kopplad till ${partnerName}` : "Utforska kategorier och preferenser"}
           </p>
         </div>
       </div>
@@ -146,7 +154,7 @@ const Dashboard = () => {
       {/* Content */}
       <div className="px-6 space-y-6">
         {/* Partner Status or Connect to Partner */}
-        {couple ? (
+        {couple && couple.user2_id ? (
           <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
             <CardContent className="p-6">
               <div className="flex items-center space-x-4">
@@ -194,7 +202,7 @@ const Dashboard = () => {
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Snabbåtgärder</h2>
           
-          {couple ? (
+          {couple && couple.user2_id ? (
             <GradientButton 
               onClick={createNewSession}
               className="w-full justify-start h-auto p-4"
@@ -244,7 +252,7 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Sessions */}
-        {couple && (
+        {couple && couple.user2_id && (
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Senaste sessioner</h2>
             
