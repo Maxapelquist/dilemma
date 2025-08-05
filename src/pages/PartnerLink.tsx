@@ -33,11 +33,12 @@ const PartnerLink = () => {
       // Check if user already has a couple
       const { data: couples } = await supabase
         .from("couples")
-        .select("*, profiles!couples_user1_id_fkey(name), profiles_user2:profiles!couples_user2_id_fkey(name)")
+        .select("*")
         .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
-        .single();
+        .maybeSingle();
 
-      if (couples) {
+      if (couples && couples.user1_id !== couples.user2_id) {
+        // Only set as existing if both users are different (properly paired)
         setExistingCouple(couples);
       }
     };
@@ -58,7 +59,7 @@ const PartnerLink = () => {
         .from("couples")
         .insert({
           user1_id: userId,
-          user2_id: userId, // Temporary, will be updated when partner joins
+          user2_id: null, // Will be updated when partner joins
           couple_code: code,
         })
         .select()
@@ -117,7 +118,10 @@ const PartnerLink = () => {
         description: "Du är nu kopplad till din partner.",
       });
 
-      navigate("/dashboard");
+      // Wait a moment then navigate to dashboard
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1500);
     } catch (error: any) {
       toast({
         title: "Ett fel uppstod",
