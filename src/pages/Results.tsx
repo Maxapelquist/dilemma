@@ -55,27 +55,8 @@ const Results = () => {
           ? coupleData.user2_id 
           : coupleData.user1_id;
 
-        // Först hämta partnerns preferenser för denna session
-        const { data: partnerPrefs, error: partnerError } = await supabase
-          .from("user_preferences")
-          .select("preference_option_id")
-          .eq("session_id", sessionId)
-          .eq("user_id", partnerId);
-
-        console.log("Partner preferences:", partnerPrefs, "Error:", partnerError);
-
-        if (!partnerPrefs || partnerPrefs.length === 0) {
-          console.log("No partner preferences found");
-          setMatches([]);
-          setLoading(false);
-          return;
-        }
-
-        const partnerPrefIds = partnerPrefs.map(p => p.preference_option_id);
-        console.log("Partner preference IDs:", partnerPrefIds);
-
-        // Sedan hämta gemensamma preferenser
-        const { data: matchingPrefs, error: matchingError } = await supabase
+        // Hämta aktuell användares preferenser för denna session
+        const { data: currentUserPrefs, error: currentUserError } = await supabase
           .from("user_preferences")
           .select(`
             preference_option_id,
@@ -89,13 +70,48 @@ const Results = () => {
             )
           `)
           .eq("session_id", sessionId)
-          .eq("user_id", currentUserId)
-          .in("preference_option_id", partnerPrefIds);
+          .eq("user_id", currentUserId);
 
-        console.log("Matching preferences:", matchingPrefs, "Error:", matchingError);
+        console.log("Current user preferences:", currentUserPrefs, "Error:", currentUserError);
+
+        if (!currentUserPrefs || currentUserPrefs.length === 0) {
+          console.log("No current user preferences found");
+          setMatches([]);
+          setLoading(false);
+          return;
+        }
+
+        // Hitta gemensamma preferenser genom att räkna hur många som valt varje option
+        const { data: allPrefsCount, error: countError } = await supabase
+          .from("user_preferences")
+          .select("preference_option_id")
+          .eq("session_id", sessionId);
+
+        console.log("All preferences count:", allPrefsCount, "Error:", countError);
+
+        if (!allPrefsCount) {
+          setMatches([]);
+          setLoading(false);
+          return;
+        }
+
+        // Räkna förekomster av varje preference_option_id
+        const prefCounts = allPrefsCount.reduce((acc, pref) => {
+          acc[pref.preference_option_id] = (acc[pref.preference_option_id] || 0) + 1;
+          return acc;
+        }, {} as Record<string, number>);
+
+        console.log("Preference counts:", prefCounts);
+
+        // Filtrera ut bara de preferenser där båda användarna har valt (count = 2)
+        const matchingOptions = currentUserPrefs.filter(pref => 
+          prefCounts[pref.preference_option_id] === 2
+        );
+
+        console.log("Matching options:", matchingOptions);
 
         // Omvandla data för visning
-        const matches = (matchingPrefs || []).map(match => ({
+        const matches = matchingOptions.map(match => ({
           name: match.preference_options?.title || '',
           description: match.preference_options?.description || '',
           category: match.preference_options?.categories?.name || '',
