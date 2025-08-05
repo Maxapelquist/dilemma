@@ -14,7 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      couples: {
+        Row: {
+          couple_code: string
+          created_at: string
+          id: string
+          updated_at: string
+          user1_id: string
+          user2_id: string | null
+        }
+        Insert: {
+          couple_code: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user1_id: string
+          user2_id?: string | null
+        }
+        Update: {
+          couple_code?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user1_id?: string
+          user2_id?: string | null
+        }
+        Relationships: []
+      }
+      preference_options: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          couple_id: string
+          created_at: string
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          couple_id: string
+          created_at?: string
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          couple_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sessions_couple_id_fkey"
+            columns: ["couple_id"]
+            isOneToOne: false
+            referencedRelation: "couples"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
