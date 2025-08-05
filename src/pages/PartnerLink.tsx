@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Copy, Heart, Users } from "lucide-react";
+import { ArrowLeft, Copy, Heart, Users, SkipForward } from "lucide-react";
 
 const PartnerLink = () => {
   const [coupleCode, setCoupleCode] = useState("");
@@ -192,15 +192,27 @@ const PartnerLink = () => {
     <div className="min-h-screen bg-gradient-background flex flex-col">
       {/* Header */}
       <div className="p-6">
-        <Button 
-          variant="ghost" 
-          size="sm"
-          onClick={() => navigate("/profile")}
-          className="hover:bg-primary/10"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          Tillbaka
-        </Button>
+        <div className="flex items-center justify-between">
+          <Button 
+            variant="ghost" 
+            size="sm"
+            onClick={() => navigate("/profile")}
+            className="hover:bg-primary/10"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            Tillbaka
+          </Button>
+          
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate("/dashboard")}
+            className="hover:bg-muted/50"
+          >
+            <SkipForward className="w-4 h-4 mr-2" />
+            Hoppa över
+          </Button>
+        </div>
       </div>
 
       {/* Partner Link */}
