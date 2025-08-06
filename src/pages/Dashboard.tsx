@@ -81,6 +81,7 @@ const Dashboard = () => {
       const { data: categoriesData } = await supabase
         .from("categories")
         .select("*")
+        .eq("is_visible", true)
         .order("name");
 
       setCategories(categoriesData || []);
