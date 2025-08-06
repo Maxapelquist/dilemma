@@ -93,12 +93,16 @@ const PartnerLink = () => {
     setLoading(true);
 
     try {
+      console.log("Joining with code:", joinCode.toUpperCase(), "User ID:", userId);
+      
       // Find the couple with this code
       const { data: couple, error: findError } = await supabase
         .from("couples")
         .select("*")
         .eq("couple_code", joinCode.toUpperCase())
         .single();
+
+      console.log("Found couple:", couple, "Error:", findError);
 
       if (findError || !couple) {
         throw new Error("Ogiltig kod. Kontrollera koden och försök igen.");
@@ -114,6 +118,8 @@ const PartnerLink = () => {
         .update({ user2_id: userId })
         .eq("id", couple.id);
 
+      console.log("Update result - Error:", updateError);
+
       if (updateError) throw updateError;
 
       toast({
@@ -121,11 +127,15 @@ const PartnerLink = () => {
         description: "Du är nu kopplad till din partner.",
       });
 
+      console.log("Successfully joined couple, navigating to dashboard in 1.5s");
+
       // Wait a moment then navigate to dashboard
       setTimeout(() => {
+        console.log("Navigating to dashboard now");
         navigate("/dashboard");
       }, 1500);
     } catch (error: any) {
+      console.error("Join error:", error);
       toast({
         title: "Ett fel uppstod",
         description: error.message,
