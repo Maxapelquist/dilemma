@@ -40,7 +40,7 @@ const Home = () => {
 
       setProfile(profileData);
 
-      // Check for existing couple
+      // Check for existing couple - get the most recent valid couple
       const { data: coupleData } = await supabase
         .from("couples")
         .select(`
@@ -49,7 +49,10 @@ const Home = () => {
           profiles_user2:profiles!couples_user2_id_fkey(name)
         `)
         .or(`user1_id.eq.${session.user.id},user2_id.eq.${session.user.id}`)
-        .single();
+        .not("user2_id", "is", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
 
       setCouple(coupleData);
       setLoading(false);
