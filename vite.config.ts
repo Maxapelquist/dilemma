@@ -9,7 +9,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
   },
-  base: "/dilemma/", // För GitHub Pages
+  base: mode === 'production' ? "/dilemma/" : "/",
   plugins: [
     react(),
     mode === 'development' &&
