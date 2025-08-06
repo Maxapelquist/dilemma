@@ -27,18 +27,18 @@ const Index = () => {
           
           {/* Heading */}
           <div className="space-y-4">
-            <h1 className="text-4xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-              Together
+            <h1 className="text-5xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+              Tillsammans
             </h1>
-            <p className="text-lg text-muted-foreground leading-relaxed">
-              En trygg plats för par att utforska gemensamma intressen och preferenser
+            <p className="text-xl text-muted-foreground leading-relaxed">
+              Utforska er intimitet med trygghet och respekt
             </p>
           </div>
 
           {/* Description */}
           <div className="bg-card/60 backdrop-blur-sm rounded-lg p-6 shadow-soft border border-border/50">
-            <p className="text-sm text-muted-foreground">
-              Upptäck vad ni båda vill utan obekväma samtal. Välj era preferenser privat och se endast det ni båda markerat.
+            <p className="text-muted-foreground leading-relaxed">
+              Upptäck vad ni båda längtar efter utan obekväma samtal. Markera era preferenser privat och se endast det ni båda valt.
             </p>
           </div>
 
@@ -46,13 +46,13 @@ const Index = () => {
           <div className="space-y-3">
             <GradientButton 
               onClick={() => navigate("/login")}
-              className="w-full text-base py-6"
+              className="w-full text-lg py-7 shadow-card"
             >
-              Börja din resa
+              Starta er resa tillsammans
             </GradientButton>
             
             <p className="text-xs text-muted-foreground">
-              Skapa ett konto eller logga in för att komma igång
+              Trygg registrering på 30 sekunder
             </p>
           </div>
         </div>

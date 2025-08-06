@@ -90,13 +90,13 @@ const Login = () => {
             <div className="w-16 h-16 mx-auto rounded-full bg-gradient-primary flex items-center justify-center mb-4">
               <span className="text-2xl">💕</span>
             </div>
-            <CardTitle className="text-2xl">
-              {isLogin ? "Välkommen tillbaka" : "Skapa konto"}
+            <CardTitle className="text-3xl">
+              {isLogin ? "Välkommen hem" : "Börja er resa"}
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-base leading-relaxed">
               {isLogin 
-                ? "Logga in för att fortsätta din resa"
-                : "Börja bygga starkare kommunikation med din partner"
+                ? "Logga in för att fortsätta utforska tillsammans"
+                : "Skapa ert konto och börja upptäcka vad ni längtar efter"
               }
             </CardDescription>
           </CardHeader>
@@ -144,7 +144,7 @@ const Login = () => {
               
               <GradientButton 
                 type="submit" 
-                className="w-full" 
+                className="w-full text-lg py-6 shadow-card" 
                 disabled={loading}
               >
                 {loading ? "Laddar..." : (isLogin ? "Logga in" : "Skapa konto")}

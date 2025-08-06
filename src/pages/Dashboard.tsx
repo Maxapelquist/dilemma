@@ -183,9 +183,14 @@ const Dashboard = () => {
       {/* Header */}
       <div className="p-6 flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
-            {couple && couple.user2_id ? `Kopplad till ${partnerName}` : "Utforska kategorier och preferenser"}
+          <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+            {couple && couple.user2_id ? "Hemma" : "Välkommen"}
+          </h1>
+          <p className="text-muted-foreground">
+            {couple && couple.user2_id ? 
+              `Du och ${partnerName} utforskar tillsammans` : 
+              "Utforska kategorier och skapa din första koppling"
+            }
           </p>
         </div>
       </div>
@@ -195,32 +200,36 @@ const Dashboard = () => {
         {/* Sessions - Primary Content */}
         {couple && couple.user2_id ? (
           <div className="space-y-6">
-            {/* Partner Status - Compact */}
-            <div className="flex items-center justify-between p-4 rounded-lg bg-card/50 border border-border/30">
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 rounded-full bg-gradient-accent flex items-center justify-center">
-                  <Users className="w-4 h-4 text-accent-foreground" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium">Kopplad till {partnerName}</p>
-                  <div className="flex items-center space-x-2">
-                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-xs text-muted-foreground">Aktiv</span>
+            {/* Partner Status - Enhanced */}
+            <div className="relative overflow-hidden rounded-xl bg-gradient-accent p-6 shadow-card border border-border/30">
+              <div className="relative z-10 flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <div className="w-12 h-12 rounded-full bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                    <Users className="w-6 h-6 text-accent-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-lg font-semibold text-accent-foreground">Du och {partnerName}</p>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                      <span className="text-sm text-accent-foreground/80">Redo för äventyr</span>
+                    </div>
                   </div>
                 </div>
+                <GradientButton 
+                  onClick={createNewSession}
+                  size="lg"
+                  className="shadow-lg"
+                >
+                  <Plus className="w-5 h-5 mr-2" />
+                  Ny resa
+                </GradientButton>
               </div>
-              <GradientButton 
-                onClick={createNewSession}
-                size="sm"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Ny session
-              </GradientButton>
+              <div className="absolute inset-0 bg-gradient-to-br from-transparent to-white/10"></div>
             </div>
 
             {/* Sessions List */}
             <div className="space-y-4">
-              <h2 className="text-xl font-semibold">Era sessioner</h2>
+              <h2 className="text-2xl font-bold bg-gradient-primary bg-clip-text text-transparent">Era gemensamma resor</h2>
               
               {sessions.length === 0 ? (
               <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
@@ -228,16 +237,16 @@ const Dashboard = () => {
                   <div className="w-16 h-16 mx-auto rounded-full bg-gradient-primary flex items-center justify-center mb-4">
                     <Plus className="w-8 h-8 text-primary-foreground" />
                   </div>
-                  <h3 className="font-medium mb-2">Ingen session än</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Skapa er första session för att börja utforska preferenser tillsammans
+                  <h3 className="text-xl font-semibold mb-2">Er första resa väntar</h3>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
+                    Skapa er första gemensamma session för att börja utforska vad ni båda längtar efter
                   </p>
                   <GradientButton 
                     onClick={createNewSession}
                     className="mx-auto"
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Skapa första sessionen
+                    Starta er resa
                   </GradientButton>
                 </CardContent>
               </Card>
@@ -321,20 +330,20 @@ const Dashboard = () => {
         ) : (
           // Not coupled yet - show simplified view
           <div className="space-y-4">
-            <h2 className="text-lg font-semibold">Kom igång</h2>
+            <h2 className="text-xl font-semibold text-center mb-2">Första steget</h2>
             <Card className="shadow-soft border-border/50 bg-card/80 backdrop-blur-sm">
               <CardContent className="p-6 text-center">
                 <Plus className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-medium mb-2">Koppla till din partner</h3>
-                <p className="text-sm text-muted-foreground mb-4">
-                  För att skapa sessioner behöver du först koppla till din partner
+                <h3 className="text-lg font-semibold mb-3">Bjud in din partner</h3>
+                <p className="text-muted-foreground mb-6 leading-relaxed">
+                  För att börja er gemensamma resa behöver ni koppla era konton tillsammans
                 </p>
                 <Button 
                   onClick={() => navigate("/partner-link")}
                   className="bg-gradient-primary hover:opacity-90"
                 >
                   <ExternalLink className="w-4 h-4 mr-2" />
-                  Koppla till partner
+                  Bjud in partner
                 </Button>
               </CardContent>
             </Card>
@@ -343,7 +352,7 @@ const Dashboard = () => {
 
         {/* Categories to Explore */}
         <div className="space-y-4">
-          <h2 className="text-lg font-semibold">Utforska kategorier</h2>
+          <h2 className="text-xl font-semibold">Upptäck tillsammans</h2>
           
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {categories.map((category) => (
