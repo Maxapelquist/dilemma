@@ -23,7 +23,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter basename="/dilemma">
+      <BrowserRouter basename={import.meta.env.PROD ? "/dilemma" : ""}>
         <GlobalHeader />
         <Routes>
           <Route path="/" element={<Index />} />
